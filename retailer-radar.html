@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cygnuz AI — Retailer Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a10;
+    --panel:#111119;
+    --grid:#1c1c28;
+    --pink:#ff2e7a;
+    --blue:#2f7bff;
+    --gold:#f2b705;
+    --text:#eef0f5;
+    --muted:#8a8ea3;
+    --up:#31d78a;
+    --down:#ff5470;
+    --header-h:64px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+      var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .wrap{
+    max-width:1280px;
+    width:100%;
+    margin:0 auto;
+    padding:16px 20px;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    min-height:0;
+  }
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:32px;height:32px;background:var(--pink);position:relative;flex-shrink:0;
+    clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);}
+  .brand-mark::after{content:"";position:absolute;inset:7px;background:var(--bg);
+    clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-size:19px;letter-spacing:0.5px;margin:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .brand span{color:var(--pink);}
+  .brand .sub{font-size:11px;color:var(--pink);text-transform:uppercase;letter-spacing:1.5px;border:1px solid var(--pink);padding:2px 7px;}
+  .tag{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.8px;margin-top:2px;}
+  .badge{border:1px solid var(--blue);color:var(--blue);font-size:10.5px;padding:6px 12px;text-transform:uppercase;letter-spacing:1px;
+    display:flex;flex-direction:column;gap:2px;align-items:flex-end;flex-shrink:0;}
+
+  .brief{margin:12px 0 14px;font-size:12px;color:var(--muted);line-height:1.55;max-width:840px;flex-shrink:0;}
+  .brief b{color:var(--text);}
+
+  /* ---------- main grid: fills remaining viewport ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:380px 1fr;
+    gap:20px;
+    position:relative;
+    flex:1;
+    min-height:0;
+  }
+  @media (max-width:860px){
+    body{overflow-y:auto;overflow-x:hidden;}
+    html{height:auto;}
+    .grid{grid-template-columns:1fr;height:auto;}
+  }
+
+  /* sync beam between phone and dashboard */
+  .sync-beam{position:absolute;top:-4px;left:380px;right:0;height:2px;pointer-events:none;z-index:5;}
+  @media (max-width:860px){.sync-beam{display:none;}}
+  .sync-dot{position:absolute;top:-3px;left:0;width:8px;height:8px;border-radius:50%;background:var(--gold);
+    box-shadow:0 0 10px 3px var(--gold);opacity:0;}
+  .sync-dot.fire{animation:travel 1.1s ease-in-out;}
+  @keyframes travel{
+    0%{opacity:0;left:0;}
+    10%{opacity:1;}
+    90%{opacity:1;}
+    100%{opacity:0;left:calc(100% - 22px);}
+  }
+
+  .card{background:var(--panel);border:1px solid var(--grid);transition:border-color .3s, box-shadow .3s;
+    display:flex;flex-direction:column;min-height:0;}
+  @media (max-width:860px){.card{height:auto;}}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--grid);gap:10px;flex-wrap:wrap;flex-shrink:0;}
+  .card-head h2{font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:0;color:var(--muted);}
+  .card-head .live-pill{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--up);text-transform:uppercase;letter-spacing:1px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 6px 2px var(--up);animation:livepulse 1.6s infinite;}
+  @keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  /* ---------- Phone / WhatsApp panel (LEFT) ---------- */
+  .phone{padding:0;}
+  .phone-top{background:#0d2b1e;padding:12px 16px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--grid);flex-shrink:0;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+  .phone-top .name{font-size:12.5px;font-weight:700;}
+  .phone-top .status{font-size:10.5px;color:var(--muted);}
+  .chat{
+    padding:14px;
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    background:radial-gradient(circle at 20% 10%, #0f2a1c 0%, transparent 40%), #0b0f14;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  @media (max-width:860px){.chat{height:380px;flex:none;}}
+  .chat::-webkit-scrollbar{width:6px;}
+  .chat::-webkit-scrollbar-thumb{background:#232838;border-radius:4px;}
+  .bubble{max-width:82%;padding:8px 10px;font-size:11.5px;line-height:1.5;border-radius:8px;position:relative;animation:pop .25s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .bubble.in{align-self:flex-start;background:#1b1e27;border-top-left-radius:2px;}
+  .bubble.out{align-self:flex-end;background:#0a3d2b;border-top-right-radius:2px;}
+  .bubble .meta{display:block;font-size:9px;color:var(--muted);margin-top:4px;text-align:right;}
+  .shelfimg{width:100%;height:90px;background:repeating-linear-gradient(45deg,#22262f,#22262f 8px,#1a1d24 8px,#1a1d24 16px);
+    border-radius:6px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);}
+  .typing{align-self:flex-start;background:#1b1e27;padding:8px 12px;border-radius:8px;display:flex;gap:4px;}
+  .typing span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:blink 1s infinite;}
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+  .chat-input{padding:10px 12px;border-top:1px solid var(--grid);display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+  .btn{border:1px solid var(--pink);color:var(--pink);background:transparent;font-family:inherit;font-size:11px;
+    padding:9px 12px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:.15s;flex:1;min-width:120px;}
+  .btn:hover{background:var(--pink);color:#0a0a10;}
+  .btn.blue{border-color:var(--blue);color:var(--blue);}
+  .btn.blue:hover{background:var(--blue);color:#0a0a10;}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .btn:disabled:hover{background:transparent;color:inherit;}
+
+  /* ---------- Dashboard (RIGHT) ---------- */
+  .store-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 16px;background:#0d1620;
+    border-bottom:1px solid var(--grid);font-size:11px;color:var(--muted);flex-wrap:wrap;flex-shrink:0;}
+  .store-strip b{color:var(--text);}
+  .store-strip .synctime{color:var(--gold);transition:color .3s;}
+  .store-strip .synctime.flash{color:var(--up);}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--grid);flex-shrink:0;}
+  .stat{background:var(--panel);padding:12px 16px;transition:background .4s, box-shadow .4s;}
+  .stat.pulse{background:#151b12;box-shadow:inset 0 0 0 1px var(--up);}
+  .stat .num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;}
+  .stat .lbl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+  .panel-body{padding:14px 16px;flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;}
+  .panel-body::-webkit-scrollbar{width:6px;}
+  .panel-body::-webkit-scrollbar-thumb{background:#232838;border-radius:4px;}
+  .chart{display:flex;align-items:flex-end;gap:22px;height:150px;padding-top:26px;border-bottom:1px solid var(--grid);margin-bottom:14px;flex-shrink:0;}
+  .barcol{display:flex;flex-direction:column;align-items:center;flex:1;gap:6px;height:100%;justify-content:flex-end;}
+  .bar{width:38px;background:var(--blue);transition:height .8s cubic-bezier(.2,.8,.2,1), background .3s, box-shadow .3s;position:relative;}
+  .bar.alert{background:var(--pink);}
+  .bar.glow{box-shadow:0 0 0 2px #fff3, 0 0 16px 4px currentColor;}
+  .bar .val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text);white-space:nowrap;}
+  .bar .delta{position:absolute;top:-32px;left:50%;transform:translateX(-50%);font-size:9px;white-space:nowrap;font-weight:700;}
+  .delta.up{color:var(--up);}
+  .delta.down{color:var(--down);}
+  .barcol .sku{font-size:9.5px;color:var(--muted);text-align:center;line-height:1.3;}
+
+  .alerts{display:flex;flex-direction:column;gap:8px;}
+  .alert{border-left:3px solid var(--gold);background:#1a1a12;padding:8px 10px;font-size:11px;display:flex;justify-content:space-between;gap:10px;animation:pop .3s ease;}
+  .alert.danger{border-left-color:var(--pink);background:#1a0f16;}
+  .alert small{display:block;color:var(--muted);margin-top:3px;font-size:9.5px;}
+  .alert time{color:var(--muted);font-size:9.5px;white-space:nowrap;}
+  .empty{color:var(--muted);font-size:11px;padding:6px 0;}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:#141420;
+    border:1px solid var(--gold);color:var(--gold);font-size:11.5px;padding:10px 18px;letter-spacing:.5px;
+    opacity:0;transition:opacity .3s, transform .3s;z-index:20;display:flex;gap:8px;align-items:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  footer{margin-top:10px;color:var(--muted);font-size:10px;text-align:center;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <h1>CYGNUZ <span>AI</span> <span class="sub">Retailer Radar</span></h1>
+        <div class="tag">ELXR Hackathon — Challenge Brief Prototype</div>
+      </div>
+    </div>
+    <div class="badge">Local thinking → global impact</div>
+  </header>
+
+  <div class="brief">
+    A retailer sends a shelf photo or voice note on WhatsApp — <b>zero app, zero new hardware, zero behaviour change</b>.
+    Cygnuz AI reads it into structured stock data, and the manufacturer dashboard updates live, in real time, for that exact store.
+    Click the buttons on the left to walk the flow end to end and watch the dashboard react.
+  </div>
+
+  <div class="grid" id="gridWrap">
+    <div class="sync-beam" id="syncBeam"><div class="sync-dot" id="syncDot"></div></div>
+
+    <!-- WhatsApp side (LEFT) -->
+    <div class="card phone">
+      <div class="phone-top">
+        <div class="avatar">🏪</div>
+        <div>
+          <div class="name">Al-Noor Store, Karachi</div>
+          <div class="status" id="status">online</div>
+        </div>
+      </div>
+      <div class="chat" id="chat">
+        <div class="bubble in">Cygnuz AI — Retailer Radar bot yahan hai. Bas shelf ki photo ya voice note bhejein — baaki hum sambhal lete hain. 📦
+          <span class="meta">Retailer Radar bot</span>
+        </div>
+      </div>
+      <div class="chat-input">
+        <button class="btn" id="sendPhoto">📷 Send shelf photo</button>
+        <button class="btn blue" id="sendVoice">🎙 Send voice note</button>
+      </div>
+    </div>
+
+    <!-- Dashboard side (RIGHT) -->
+    <div class="card" id="dashCard">
+      <div class="card-head">
+        <h2>National Foods · Demand Dashboard</h2>
+        <div class="live-pill"><span class="live-dot"></span> Live <span style="color:var(--muted);text-transform:none;">/ زندہ</span></div>
+      </div>
+      <div class="store-strip">
+        <div>📍 Tracking: <b>Al-Noor Store, Karachi</b> <span style="color:#6f7288;">— دکان: النور اسٹور</span></div>
+        <div>Last synced: <span class="synctime" id="syncTime">—</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat" id="statRetailersBox"><div class="num" id="statRetailers">86</div><div class="lbl">Retailers connected</div></div>
+        <div class="stat" id="statPhotosBox"><div class="num" id="statPhotos">312</div><div class="lbl">Updates processed today</div></div>
+        <div class="stat" id="statAlertsBox"><div class="num" id="statAlerts">1</div><div class="lbl">Active alerts</div></div>
+      </div>
+      <div class="panel-body">
+        <div class="chart" id="chart"></div>
+        <div class="alerts" id="alerts"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Prototype only — stock levels, chat, and alerts are simulated to demo the pipeline for judging.</footer>
+</div>
+
+<div class="toast" id="toast">🔄 Syncing update to dashboard… / ڈیش بورڈ کو اپڈیٹ کیا جا رہا ہے…</div>
+
+<script>
+const chat = document.getElementById('chat');
+const statusEl = document.getElementById('status');
+const alertsEl = document.getElementById('alerts');
+const chartEl = document.getElementById('chart');
+const btnPhoto = document.getElementById('sendPhoto');
+const btnVoice = document.getElementById('sendVoice');
+const syncDot = document.getElementById('syncDot');
+const syncTime = document.getElementById('syncTime');
+const toast = document.getElementById('toast');
+const dashCard = document.getElementById('dashCard');
+
+let skus = [
+  {name:'National Ketchup 800g', val:34, delta:0, max:60},
+  {name:'Lays Chips 40g', val:52, delta:0, max:60},
+  {name:'Coke 1.5L', val:20, delta:0, max:60},
+  {name:'Tapal Danedar 190g', val:41, delta:0, max:60},
+];
+
+function renderChart(glowIdx){
+  chartEl.innerHTML = '';
+  skus.forEach((s,i)=>{
+    const col = document.createElement('div');
+    col.className='barcol';
+    const pct = Math.max(6, (s.val/s.max)*100);
+    const glow = (glowIdx && glowIdx.includes(i)) ? ' glow' : '';
+    col.innerHTML = `
+      <div class="bar${s.alert?' alert':''}${glow}" style="height:${pct}%">
+        ${s.delta!==0?`<div class="delta ${s.delta>0?'up':'down'}">${s.delta>0?'▲':'▼'} ${Math.abs(s.delta)}</div>`:''}
+        <div class="val">${s.val}</div>
+      </div>
+      <div class="sku">${s.name}</div>`;
+    chartEl.appendChild(col);
+  });
+}
+renderChart();
+renderAlerts([]);
+
+function renderAlerts(list){
+  if(!list.length){ alertsEl.innerHTML = '<div class="empty">No active alerts — all stock levels look healthy. <span style="display:block;margin-top:4px;color:#6f7288;">کوئی الرٹ نہیں — تمام اسٹاک لیول ٹھیک ہیں۔</span></div>'; return; }
+  alertsEl.innerHTML = list.map(a=>`
+    <div class="alert ${a.danger?'danger':''}">
+      <div>⚠ ${a.text}<small>${a.sub}</small></div>
+      <time>${a.time}</time>
+    </div>`).join('');
+}
+
+function addBubble(html, cls){
+  const b = document.createElement('div');
+  b.className = 'bubble ' + cls;
+  b.innerHTML = html;
+  chat.appendChild(b);
+  chat.scrollTop = chat.scrollHeight;
+  return b;
+}
+
+function addTyping(){
+  const t = document.createElement('div');
+  t.className='typing';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  chat.appendChild(t);
+  chat.scrollTop = chat.scrollHeight;
+  return t;
+}
+
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function fireSync(){
+  // shoots a glowing dot from phone to dashboard, then flashes the dashboard card + toast
+  syncDot.classList.remove('fire');
+  void syncDot.offsetWidth; // restart animation
+  syncDot.classList.add('fire');
+  dashCard.style.boxShadow = '0 0 0 1px var(--gold)';
+  toast.classList.add('show');
+  setTimeout(()=>{ toast.classList.remove('show'); }, 1600);
+  setTimeout(()=>{ dashCard.style.boxShadow = 'none'; }, 900);
+}
+
+function stampSync(){
+  syncTime.textContent = 'just now / ابھی ابھی';
+  syncTime.classList.add('flash');
+  setTimeout(()=>syncTime.classList.remove('flash'), 800);
+}
+
+function countUp(el, from, to, ms){
+  const start = performance.now();
+  function step(now){
+    const p = Math.min(1, (now-start)/ms);
+    el.textContent = Math.round(from + (to-from)*p);
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function pulseStat(boxId){
+  const box = document.getElementById(boxId);
+  box.classList.add('pulse');
+  setTimeout(()=>box.classList.remove('pulse'), 1000);
+}
+
+let running = false;
+
+async function runPhotoFlow(){
+  if(running) return;
+  running = true;
+  btnPhoto.disabled = true; btnVoice.disabled = true;
+  statusEl.textContent = 'typing…';
+
+  addBubble(`<div class="shelfimg">📸 shelf_update_14.jpg</div>Yeh raha aaj ka shelf, dukaan bandh karte waqt.<span class="meta">10:41 AM ✓✓</span>`, 'out');
+  await wait(700);
+  const t = addTyping();
+  await wait(1400);
+  t.remove();
+
+  addBubble(`Photo mil gayi ✅ Reading kar raha hoon...<span class="meta">Retailer Radar bot</span>`, 'in');
+  await wait(900);
+  fireSync();
+  await wait(500);
+
+  addBubble(`Extracted stock levels:<br>
+    • National Ketchup 800g — ~34 units (▲6 from last week)<br>
+    • Lays Chips 40g — ~52 units (▲8)<br>
+    • Coke 1.5L — ~20 units (▼14 — fast moving)<br>
+    • Tapal Danedar 190g — ~41 units (▼2)<br>
+    Sync ho gaya manufacturer dashboard pe. Shukriya! 🙌<span class="meta">Retailer Radar bot</span>`, 'in');
+
+  skus[0].val=34; skus[0].delta=6; skus[0].alert=false;
+  skus[1].val=52; skus[1].delta=8; skus[1].alert=false;
+  skus[2].val=20; skus[2].delta=-14; skus[2].alert=true;
+  skus[3].val=41; skus[3].delta=-2; skus[3].alert=false;
+  renderChart([0,1,2,3]);
+  stampSync();
+
+  const photosEl = document.getElementById('statPhotos');
+  const alertsNumEl = document.getElementById('statAlerts');
+  countUp(photosEl, 312, 313, 500);
+  countUp(alertsNumEl, 1, 2, 500);
+  pulseStat('statPhotosBox');
+  pulseStat('statAlertsBox');
+
+  renderAlerts([
+    {text:'Coke 1.5L inventory dropping fast in Karachi retailers', sub:'Down 14 units at Al-Noor Store since last week — consider restock push', time:'just now', danger:true},
+    {text:'Lays Chips 40g demand rising across region', sub:'Up 8 units at Al-Noor Store, consistent with 3 other stores nearby', time:'2h ago'}
+  ]);
+
+  statusEl.textContent = 'online';
+  btnPhoto.disabled = false; btnVoice.disabled = false;
+  running = false;
+}
+
+async function runVoiceFlow(){
+  if(running) return;
+  running = true;
+  btnPhoto.disabled = true; btnVoice.disabled = true;
+  statusEl.textContent = 'typing…';
+
+  addBubble(`🎙 Voice note — 0:14<div style="height:18px;background:repeating-linear-gradient(90deg,#31d78a,#31d78a 3px,transparent 3px,transparent 6px);margin-top:6px;border-radius:4px;"></div><span class="meta">10:52 AM ✓✓</span>`, 'out');
+  await wait(700);
+  const t = addTyping();
+  await wait(1600);
+  t.remove();
+
+  fireSync();
+  await wait(400);
+
+  addBubble(`Voice note sun li (Urdu detected) 🎧<br>
+    Transcript: "aaj biscuit aur chai patti kam ho gayi hai, baaki sab theek hai"<br>
+    Samajh gaya — biscuits aur chai patti ka stock low flag kar raha hoon.<span class="meta">Retailer Radar bot</span>`, 'in');
+
+  stampSync();
+  const photosEl = document.getElementById('statPhotos');
+  countUp(photosEl, parseInt(photosEl.textContent), parseInt(photosEl.textContent)+1, 400);
+  pulseStat('statPhotosBox');
+
+  statusEl.textContent = 'online';
+  btnPhoto.disabled = false; btnVoice.disabled = false;
+  running = false;
+}
+
+btnPhoto.addEventListener('click', runPhotoFlow);
+btnVoice.addEventListener('click', runVoiceFlow);
+</script>
+</body>
+</html>
